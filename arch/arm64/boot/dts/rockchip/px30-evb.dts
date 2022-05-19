@@ -136,11 +136,10 @@
 	};
 
 	panel@0 {
-		compatible = "xinpeng,xpp055c272";
+		compatible = "wanchanglong,w552946aba";
 		reg = <0>;
 		backlight = <&backlight>;
-		iovcc-supply = <&vcc_1v8>;
-		vci-supply = <&vcc3v3_lcd>;
+		power-supply = <&vcc3v3_lcd>;
 
 		port {
 			mipi_in_panel: endpoint {
