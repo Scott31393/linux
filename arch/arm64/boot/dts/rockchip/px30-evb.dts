@@ -20,7 +20,7 @@
 	};
 
 	chosen {
-		stdout-path = "serial5:115200n8";
+		stdout-path = "serial2:115200n8";
 	};
 
 	adc-keys {
@@ -611,6 +611,10 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart1_xfer &uart1_cts>;
+	status = "okay";
+};
+
+&uart2 {
 	status = "okay";
 };
 
