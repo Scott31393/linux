@@ -6,12 +6,14 @@
 
 #include <linux/freezer.h>
 #include <linux/jiffies.h>
+#include <asm/div64.h>
 #include "vivid-core.h"
 #include "vivid-kthread-touch.h"
 #include "vivid-touch-cap.h"
 
 static noinline_for_stack void vivid_thread_tch_cap_tick(struct vivid_dev *dev,
-							 int dropped_bufs)
+														 u64 ts,
+														 int dropped_bufs)
 {
 	struct vivid_buffer *tch_cap_buf = NULL;
 
@@ -36,14 +38,15 @@ static noinline_for_stack void vivid_thread_tch_cap_tick(struct vivid_dev *dev,
 		dprintk(dev, 2, "touch_cap buffer %d done\n",
 			tch_cap_buf->vb.vb2_buf.index);
 
-		tch_cap_buf->vb.vb2_buf.timestamp = ktime_get_ns() + dev->time_wrap_offset;
+		tch_cap_buf->vb.vb2_buf.timestamp = ts + dev->time_wrap_offset;
 	}
 	dev->dqbuf_error = false;
 }
 
-static int vivid_thread_touch_cap(void *data)
+static void vivid_touch_cap_work(struct work_struct *work)
 {
-	struct vivid_dev *dev = data;
+	struct vivid_dev *dev = container_of(work,
+							struct vivid_dev, work_touch_cap);
 	u64 numerators_since_start;
 	u64 buffers_since_start;
 	u64 next_jiffies_since_start;
@@ -110,7 +113,7 @@ static int vivid_thread_touch_cap(void *data)
 		dev->touch_cap_with_seq_wrap_count =
 			dev->touch_cap_seq_count - dev->touch_cap_seq_start;
 
-		vivid_thread_tch_cap_tick(dev, dropped_bufs);
+		vivid_thread_tch_cap_tick(dev, ktime_get_ns(), dropped_bufs);
 
 		/*
 		 * Calculate the number of 'numerators' streamed
@@ -140,27 +143,42 @@ static int vivid_thread_touch_cap(void *data)
 			schedule();
 	}
 	dprintk(dev, 1, "Touch Capture Thread End\n");
-	return 0;
 }
+
+static enum hrtimer_restart vivid_hrtimer_touch_cap(struct hrtimer *hrtimer)
+{
+	unsigned int wait_send_next_ns = 1000;
+	struct vivid_dev *dev = container_of(hrtimer,
+							struct vivid_dev, hrtimer_touch_cap);
+
+	if (!work_busy(&dev->work_touch_cap))
+		schedule_work(&dev->work_touch_cap);
+
+	hrtimer_forward_now(hrtimer, ns_to_ktime(wait_send_next_ns));
+	return HRTIMER_RESTART;
+}
+
 
 int vivid_start_generating_touch_cap(struct vivid_dev *dev)
 {
-	if (dev->kthread_touch_cap) {
-		dev->touch_cap_streaming = true;
+	unsigned int init_hrtimer_tick_ns;
+	struct hrtimer *hrt = &dev->hrtimer_touch_cap;
+	init_hrtimer_tick_ns = 1000000000;
+
+	/* TODO: Check this */
+	if (dev->touch_cap_streaming) {
+		dprintk(dev, 1, "already streaming returning from %s\n", __func__);
 		return 0;
 	}
 
 	dev->touch_cap_seq_start = dev->seq_wrap * 128;
-	dev->kthread_touch_cap = kthread_run(vivid_thread_touch_cap, dev,
-					     "%s-tch-cap", dev->v4l2_dev.name);
+	hrtimer_init(hrt, CLOCK_REALTIME, HRTIMER_MODE_ABS);
+	hrt->function = vivid_hrtimer_touch_cap;
+	hrtimer_start(hrt, ns_to_ktime(init_hrtimer_tick_ns),
+				  HRTIMER_MODE_ABS);
 
-	if (IS_ERR(dev->kthread_touch_cap)) {
-		int err = PTR_ERR(dev->kthread_touch_cap);
+	INIT_WORK(&dev->work_touch_cap, vivid_touch_cap_work);
 
-		dev->kthread_touch_cap = NULL;
-		v4l2_err(&dev->v4l2_dev, "kernel_thread() failed\n");
-		return err;
-	}
 	dev->touch_cap_streaming = true;
 	dprintk(dev, 1, "returning from %s\n", __func__);
 	return 0;
@@ -168,7 +186,10 @@ int vivid_start_generating_touch_cap(struct vivid_dev *dev)
 
 void vivid_stop_generating_touch_cap(struct vivid_dev *dev)
 {
-	if (!dev->kthread_touch_cap)
+	struct hrtimer *hrt = &dev->hrtimer_touch_cap;
+
+	/* TODO: Check this */
+	if (!hrt)
 		return;
 
 	dev->touch_cap_streaming = false;
@@ -186,6 +207,5 @@ void vivid_stop_generating_touch_cap(struct vivid_dev *dev)
 			buf->vb.vb2_buf.index);
 	}
 
-	kthread_stop(dev->kthread_touch_cap);
-	dev->kthread_touch_cap = NULL;
+	hrtimer_cancel(hrt);
 }

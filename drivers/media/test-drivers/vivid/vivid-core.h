@@ -9,6 +9,8 @@
 #define _VIVID_CORE_H_
 
 #include <linux/fb.h>
+#include <linux/hrtimer.h>
+#include <linux/timekeeper_internal.h>
 #include <linux/workqueue.h>
 #include <media/cec.h>
 #include <media/videobuf2-v4l2.h>
@@ -445,6 +447,14 @@ struct vivid_dev {
 	struct v4l2_fract		timeperframe_tch_cap;
 	struct v4l2_pix_format		tch_format;
 	int				tch_pat_random;
+
+	/* Touch capture hrtimer */
+	struct hrtimer			hrtimer_touch_cap;
+	ktime_t		time_touch_cap;
+	bool				hrtimer_touch_cap_started;
+
+	/* touch capture workqueue */
+	struct work_struct	work_touch_cap;
 
 	/* video output */
 	const struct vivid_fmt		*fmt_out;
