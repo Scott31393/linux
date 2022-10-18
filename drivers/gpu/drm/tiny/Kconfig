@@ -148,6 +148,19 @@ config TINYDRM_ILI9486
 
 	  If M is selected the module will be called ili9486.
 
+config TINYDRM_ILI9488
+	tristate "DRM support for ILI9488 display panels"
+	depends on DRM && SPI
+	select DRM_KMS_HELPER
+	select DRM_GEM_CMA_HELPER
+	select DRM_MIPI_DBI
+	select BACKLIGHT_CLASS_DEVICE
+	help
+	  DRM driver for the following Ilitek ILI9488 panels:
+	  * LCD 3.5" 320x480 TFT (Waveshare Pico-ResTouch-LCD-3.5")
+
+	  If M is selected the module will be called ili9486.
+
 config TINYDRM_MI0283QT
 	tristate "DRM support for MI0283QT"
 	depends on DRM && SPI
