@@ -240,7 +240,7 @@ out_drm_gem_fb_end_cpu_access:
 }
 EXPORT_SYMBOL(mipi_dbi_buf_copy);
 
-static void mipi_dbi_set_window_address(struct mipi_dbi_dev *dbidev,
+void mipi_dbi_set_window_address(struct mipi_dbi_dev *dbidev,
 					unsigned int xs, unsigned int xe,
 					unsigned int ys, unsigned int ye)
 {
@@ -256,6 +256,7 @@ static void mipi_dbi_set_window_address(struct mipi_dbi_dev *dbidev,
 	mipi_dbi_command(dbi, MIPI_DCS_SET_PAGE_ADDRESS, (ys >> 8) & 0xff,
 			 ys & 0xff, (ye >> 8) & 0xff, ye & 0xff);
 }
+EXPORT_SYMBOL(mipi_dbi_set_window_address);
 
 static void mipi_dbi_fb_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 {
@@ -340,6 +341,8 @@ void mipi_dbi_pipe_update(struct drm_simple_display_pipe *pipe,
 {
 	struct drm_plane_state *state = pipe->plane.state;
 	struct drm_rect rect;
+
+	printk("KERN_ERR, DEBUG FUNC = %s, LINE = %d, \n", __func__, __LINE__);
 
 	if (!pipe->crtc.state->active)
 		return;
@@ -652,8 +655,9 @@ static int mipi_dbi_poweron_reset_conditional(struct mipi_dbi_dev *dbidev, bool 
 		}
 	}
 
-	if (cond && mipi_dbi_display_is_on(dbi))
+	if (cond && mipi_dbi_display_is_on(dbi)){
 		return 1;
+	}
 
 	mipi_dbi_hw_reset(dbi);
 	ret = mipi_dbi_command(dbi, MIPI_DCS_SOFT_RESET);
