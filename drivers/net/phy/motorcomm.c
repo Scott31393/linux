@@ -13,9 +13,9 @@
 #include <linux/of.h>
 
 #define PHY_ID_YT8511		0x0000010a
-#define PHY_ID_YT8521		0x0000011a
+#define PHY_ID_YT8521		0x0000011A
 #define PHY_ID_YT8531		0x4f51e91b
-#define PHY_ID_YT8531S		0x4f51e91a
+#define PHY_ID_YT8531S		0x4F51E91A
 
 /* YT8521/YT8531S Register Overview
  *	UTP Register space	|	FIBER Register space
@@ -823,6 +823,17 @@ static int ytphy_rgmii_clk_delay_config(struct phy_device *phydev)
 	return ytphy_modify_ext(phydev, YT8521_RGMII_CONFIG1_REG, mask, val);
 }
 
+static int ytphy_rgmii_clk_delay_config_with_lock(struct phy_device *phydev)
+{
+	int ret;
+
+	phy_lock_mdio_bus(phydev);
+	ret = ytphy_rgmii_clk_delay_config(phydev);
+	phy_unlock_mdio_bus(phydev);
+
+	return ret;
+}
+
 /**
  * yt8521_probe() - read chip config then set suitable polling_mode
  * @phydev: a pointer to a &struct phy_device
@@ -1497,10 +1508,10 @@ static int yt8531_config_init(struct phy_device *phydev)
 static void yt8531_link_change_notify(struct phy_device *phydev)
 {
 	struct device_node *node = phydev->mdio.dev.of_node;
-	bool tx_clk_1000_inverted = false;
-	bool tx_clk_100_inverted = false;
-	bool tx_clk_10_inverted = false;
 	bool tx_clk_adj_enabled = false;
+	bool tx_clk_1000_inverted;
+	bool tx_clk_100_inverted;
+	bool tx_clk_10_inverted;
 	u16 val = 0;
 	int ret;
 
