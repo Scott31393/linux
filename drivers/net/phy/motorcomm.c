@@ -823,17 +823,6 @@ static int ytphy_rgmii_clk_delay_config(struct phy_device *phydev)
 	return ytphy_modify_ext(phydev, YT8521_RGMII_CONFIG1_REG, mask, val);
 }
 
-static int ytphy_rgmii_clk_delay_config_with_lock(struct phy_device *phydev)
-{
-	int ret;
-
-	phy_lock_mdio_bus(phydev);
-	ret = ytphy_rgmii_clk_delay_config(phydev);
-	phy_unlock_mdio_bus(phydev);
-
-	return ret;
-}
-
 /**
  * yt8521_probe() - read chip config then set suitable polling_mode
  * @phydev: a pointer to a &struct phy_device
@@ -923,32 +912,7 @@ static int yt8521_probe(struct phy_device *phydev)
 			return -EINVAL;
 		}
 	} else if (phydev->drv->phy_id == PHY_ID_YT8531S) {
-		switch (freq) {
-		case YTPHY_DTS_OUTPUT_CLK_DIS:
-			mask = YT8531_SCR_SYNCE_ENABLE;
-			val = 0;
-			break;
-		case YTPHY_DTS_OUTPUT_CLK_25M:
-			mask = YT8531_SCR_SYNCE_ENABLE |
-			       YT8531_SCR_CLK_SRC_MASK |
-			       YT8531_SCR_CLK_FRE_SEL_125M;
-			val = YT8531_SCR_SYNCE_ENABLE |
-			      FIELD_PREP(YT8531_SCR_CLK_SRC_MASK,
-					 YT8531_SCR_CLK_SRC_REF_25M);
-			break;
-		case YTPHY_DTS_OUTPUT_CLK_125M:
-			mask = YT8531_SCR_SYNCE_ENABLE |
-			       YT8531_SCR_CLK_SRC_MASK |
-			       YT8531_SCR_CLK_FRE_SEL_125M;
-			val = YT8531_SCR_SYNCE_ENABLE |
-			      YT8531_SCR_CLK_FRE_SEL_125M |
-			      FIELD_PREP(YT8531_SCR_CLK_SRC_MASK,
-					 YT8531_SCR_CLK_SRC_PLL_125M);
-			break;
-		default:
-			phydev_warn(phydev, "Freq err:%u\n", freq);
-			return -EINVAL;
-		}
+		return 0;
 	} else {
 		phydev_warn(phydev, "PHY id err\n");
 		return -EINVAL;
