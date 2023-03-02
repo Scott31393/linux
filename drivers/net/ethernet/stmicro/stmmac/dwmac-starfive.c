@@ -7,9 +7,14 @@
  *
  */
 
+#include <linux/mfd/syscon.h>
 #include <linux/of_device.h>
+#include <linux/regmap.h>
 
 #include "stmmac_platform.h"
+
+#define MACPHYC_PHY_INFT_RMII	0x4
+#define MACPHYC_PHY_INFT_RGMII	0x1
 
 struct starfive_dwmac {
 	struct device *dev;
@@ -53,6 +58,46 @@ static void starfive_eth_fix_mac_speed(void *priv, unsigned int speed)
 		dev_err(dwmac->dev, "failed to set tx rate %lu\n", rate);
 }
 
+static int starfive_dwmac_set_mode(struct plat_stmmacenet_data *plat_dat)
+{
+	struct starfive_dwmac *dwmac = plat_dat->bsp_priv;
+	struct of_phandle_args args;
+	struct regmap *regmap;
+	unsigned int reg, mask, mode;
+	int err;
+
+	switch (plat_dat->interface) {
+	case PHY_INTERFACE_MODE_RMII:
+		mode = MACPHYC_PHY_INFT_RMII;
+		break;
+
+	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+		mode = MACPHYC_PHY_INFT_RGMII;
+		break;
+
+	default:
+		dev_err(dwmac->dev, "Unsupported interface %d\n",
+			plat_dat->interface);
+	}
+
+	err = of_parse_phandle_with_fixed_args(dwmac->dev->of_node,
+					       "starfive,syscon", 2, 0, &args);
+	if (err) {
+		dev_dbg(dwmac->dev, "syscon reg not found\n");
+		return -EINVAL;
+	}
+
+	reg = args.args[0];
+	mask = args.args[1];
+	regmap = syscon_node_to_regmap(args.np);
+	of_node_put(args.np);
+	if (IS_ERR(regmap))
+		return PTR_ERR(regmap);
+
+	return regmap_update_bits(regmap, reg, mask, mode << __ffs(mask));
+}
+
 static int starfive_dwmac_probe(struct platform_device *pdev)
 {
 	struct plat_stmmacenet_data *plat_dat;
@@ -93,6 +138,7 @@ static int starfive_dwmac_probe(struct platform_device *pdev)
 	plat_dat->bsp_priv = dwmac;
 	plat_dat->dma_cfg->dche = true;
 
+	starfive_dwmac_set_mode(plat_dat);
 	err = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
 	if (err) {
 		stmmac_remove_config_dt(pdev, plat_dat);
