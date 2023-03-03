@@ -167,9 +167,9 @@ config DWMAC_SOCFPGA
 
 config DWMAC_STARFIVE
 	tristate "StarFive dwmac support"
-	depends on OF  && (ARCH_STARFIVE || COMPILE_TEST)
+	depends on OF  && (SOC_STARFIVE || COMPILE_TEST)
 	depends on STMMAC_ETH
-	default ARCH_STARFIVE
+	default SOC_STARFIVE
 	help
 	  Support for ethernet controllers on StarFive RISC-V SoCs
 
