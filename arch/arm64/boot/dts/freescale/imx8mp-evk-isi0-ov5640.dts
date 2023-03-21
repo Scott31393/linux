@@ -1,0 +1,115 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/imx8mp-clock.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/media/video-interfaces.h>
+#include "imx8mp-pinfunc.h"
+
+/ {
+	fragment@0 {
+		target = <&iomuxc>;
+		__overlay__ {
+
+			pinctrl_csi0_pwn: csi0_pwn_grp {
+				fsl,pins = <
+					MX8MP_IOMUXC_SD1_STROBE__GPIO2_IO11	0x19
+				>;
+			};
+
+			pinctrl_csi0_rst: csi0_rst_grp {
+				fsl,pins = <
+					MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06		0x19
+				>;
+			};
+
+			pinctrl_csi_mclk: csi_mclk_grp {
+				fsl,pins = <
+					MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2	0x59
+				>;
+			};
+
+			pinctrl_i2c2: i2c2grp {
+				fsl,pins = <
+					MX8MP_IOMUXC_I2C2_SCL__I2C2_SCL		0x400001c3
+					MX8MP_IOMUXC_I2C2_SDA__I2C2_SDA		0x400001c3
+				>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&i2c2>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clock-frequency = <100000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_i2c2>;
+			status = "okay";
+
+			camera: ov5640@3c {
+				compatible = "ovti,ov5640";
+				reg = <0x3c>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_csi0_pwn>, <&pinctrl_csi0_rst>, <&pinctrl_csi_mclk>;
+				clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
+				clock-names = "xclk";
+				assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
+				assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
+				assigned-clock-rates = <24000000>;
+				powerdown-gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
+				reset-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
+				status = "okay";
+
+				port {
+					ov5640_out: endpoint {
+						remote-endpoint = <&mipi_csi_0_in>;
+						data-lanes = <1 2>;
+						clock-lanes = <0>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&isi_0>;
+		__overlay__ {
+			status = "okay";
+			dma-coherent;
+
+			ports {
+				port@0 {
+					isi_in_0: endpoint {
+						bus-type = <MEDIA_BUS_TYPE_PARALLEL>;
+						remote-endpoint = <&mipi_csi_0_out>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&mipi_csi_0>;
+		__overlay__ {
+			status = "okay";
+
+			ports {
+				port@0 {
+					mipi_csi_0_in: endpoint {
+						remote-endpoint = <&ov5640_out>;
+						data-lanes = <1 2>;
+						clock-lanes = <0>;
+					};
+				};
+
+				port@1 {
+					mipi_csi_0_out: endpoint {
+						remote-endpoint = <&isi_in_0>;
+					};
+				};
+			};
+		};
+	};
+};

@@ -1,0 +1,115 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/imx8mp-clock.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/media/video-interfaces.h>
+#include "imx8mp-pinfunc.h"
+
+/ {
+	fragment@0 {
+		target = <&iomuxc>;
+		__overlay__ {
+
+			pinctrl_csi0_pwn: csi0_pwn_grp {
+				fsl,pins = <
+					MX8MP_IOMUXC_SD1_STROBE__GPIO2_IO11	0x19
+				>;
+			};
+
+			pinctrl_i2c2: i2c2grp {
+				fsl,pins = <
+					MX8MP_IOMUXC_I2C2_SCL__I2C2_SCL		0x400001c3
+					MX8MP_IOMUXC_I2C2_SDA__I2C2_SDA		0x400001c3
+				>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target-path = "/";
+		__overlay__ {
+			reg_vcc_ext_in: regulator-vcc-ext-in {
+				compatible = "regulator-fixed";
+				regulator-name = "vcc-ext-in";
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_csi0_pwn>;
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5000000>;
+				gpio = <&gpio2 11 GPIO_ACTIVE_HIGH>;
+				regulator-boot-on;
+				regulator-always-on;
+				enable-active-high;
+			};
+		};
+	};
+
+	fragment@2 {
+		target = <&i2c2>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clock-frequency = <400000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_i2c2>;
+			status = "okay";
+
+			camera: alvium@3c {
+				compatible = "alliedvision,alvium-csi2";
+				reg = <0x3c>;
+				vcc-ext-in-supply = <&reg_vcc_ext_in>;
+				status = "okay";
+
+				port {
+					alvium_out: endpoint {
+						remote-endpoint = <&mipi_csi_0_in>;
+						data-lanes = <1 2 3 4>;
+						link-frequencies = /bits/ 64 <681250000>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&isi_0>;
+		__overlay__ {
+			status = "okay";
+			dma-coherent;
+
+			ports {
+				port@0 {
+					isi_in_0: endpoint {
+						bus-type = <MEDIA_BUS_TYPE_PARALLEL>;
+						remote-endpoint = <&mipi_csi_0_out>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@4 {
+		target = <&mipi_csi_0>;
+		__overlay__ {
+			clock-frequency = <681250000>;
+			assigned-clock-rates = <500000000>;
+			status = "okay";
+
+			ports {
+				port@0 {
+					mipi_csi_0_in: endpoint {
+						remote-endpoint = <&alvium_out>;
+						data-lanes = <1 2 3 4>;
+						clock-lanes = <0>;
+					};
+				};
+
+				port@1 {
+					mipi_csi_0_out: endpoint {
+						remote-endpoint = <&isi_in_0>;
+					};
+				};
+			};
+		};
+	};
+};
