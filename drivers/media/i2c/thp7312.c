@@ -889,6 +889,10 @@ static const struct v4l2_subdev_video_ops thp7312_video_ops = {
 
 static const struct v4l2_subdev_pad_ops thp7312_pad_ops = {
 	.enum_mbus_code = thp7312_enum_mbus_code,
+<<<<<<< HEAD
+=======
+	.init_cfg = thp7312_init_cfg,
+>>>>>>> dba852dd90a1 (media: i2c: Add driver for THine THP7312)
 	.get_fmt = v4l2_subdev_get_fmt,
 	.set_fmt = thp7312_set_fmt,
 	.get_frame_interval = v4l2_subdev_get_frame_interval,
@@ -903,10 +907,13 @@ static const struct v4l2_subdev_ops thp7312_subdev_ops = {
 	.pad = &thp7312_pad_ops,
 };
 
+<<<<<<< HEAD
 static const struct v4l2_subdev_internal_ops thp7312_internal_ops = {
 	.init_state = thp7312_init_state,
 };
 
+=======
+>>>>>>> dba852dd90a1 (media: i2c: Add driver for THine THP7312)
 /* -----------------------------------------------------------------------------
  * V4L2 Control Operations
  */
