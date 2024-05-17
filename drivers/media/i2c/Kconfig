@@ -1624,6 +1624,23 @@ config VIDEO_MAX96714
 	  To compile this driver as a module, choose M here: the
 	  module will be called max96714.
 
+config VIDEO_MAX96716
+	tristate "Maxim MAX96716 GMSL2 deserializer"
+	depends on OF && I2C && VIDEO_DEV
+	select I2C_MUX
+	select MEDIA_CONTROLLER
+	select GPIOLIB
+	select V4L2_CCI_I2C
+	select V4L2_FWNODE
+	select VIDEO_V4L2_SUBDEV_API
+	help
+	  Device driver for the Maxim MAX96716 GMSL2 Deserializer.
+	  MAX96716 deserializers convert a GMSL2 input to MIPI CSI-2
+	  output.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called max96716.
+
 config VIDEO_MAX96717
 	tristate "Maxim MAX96717 GMSL2 Serializer support"
 	depends on OF && I2C && VIDEO_DEV && COMMON_CLK
