@@ -1131,6 +1131,18 @@ static int alvium_set_mipi_fmt(struct alvium_dev *alvium,
 	return 0;
 }
 
+static int alvium_get_raw_temp(struct alvium_dev *alvium)
+{
+	u64 val;
+	int ret;
+
+	ret = alvium_read(alvium, REG_BCRM_DEVICE_TEMPERATURE_R, &val, NULL);
+	if (ret)
+		return ret;
+
+	return val;
+}
+
 static int alvium_get_avail_bayer(struct alvium_dev *alvium)
 {
 	struct alvium_avail_bayer *avail_bay;
@@ -2388,6 +2400,19 @@ static int alvium_init_state(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int alvium_log_status(struct v4l2_subdev *sd)
+{
+	struct alvium_dev *alvium = sd_to_alvium(sd);
+	struct device *dev = &alvium->i2c_client->dev;
+
+	dev_info(dev, "Camera: alvium-csi2\n");
+	dev_info(dev, "temperature:%d.%1d\n",
+		 (int)(alvium_get_raw_temp(alvium) / 10),
+		 (int)(alvium_get_raw_temp(alvium) % 10));
+
+	return 0;
+}
+
 static int alvium_set_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_state *sd_state,
 			  struct v4l2_subdev_format *format)
@@ -2739,7 +2764,7 @@ free_ctrls:
 }
 
 static const struct v4l2_subdev_core_ops alvium_core_ops = {
-	.log_status = v4l2_ctrl_subdev_log_status,
+	.log_status = alvium_log_status,
 	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
 	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
 };
